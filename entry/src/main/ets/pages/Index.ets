@@ -107,9 +107,9 @@ struct Index {
       .backgroundColor($r('app.color.button_show_background'))
       .width('100%')
       .height($r('app.float.medium_height'))
-      .onClick(() => {
+      .onClick(async () => {
         VibrationManager.vibrateClick();
-        this.listReminders();
+        await this.listReminders();
       })
 
       Button() {
@@ -206,11 +206,27 @@ struct Index {
       triggerTimeInSeconds: timeInSeconds,
       title: this.reminderTitle,
       content: this.reminderContent,
-      notificationId: ++this.notificationId
+      notificationId: ++this.notificationId,
+      wantAgent: {
+        bundleName: 'com.hmosdemos.quickreminder',
+        abilityName: 'EntryAbility'
+      },
+      maxScreenWantAgent: {
+        bundleName: 'com.hmosdemos.quickreminder',
+        abilityName: 'EntryAbility'
+      },
+      actionButton: [
+        {
+          title: 'Close',
+          type: reminderAgentManager.ActionButtonType.ACTION_BUTTON_TYPE_CLOSE
+        }
+      ]
     };
 
     try {
+      Logger.info(`Publishing reminder: ${JSON.stringify(timerReminder)}`);
       const id = await reminderAgentManager.publishReminder(timerReminder);
+      Logger.info(`Reminder published with ID: ${id}`);
       this.reminderId = id;
       this.reminderStatus = $r('app.string.status_set');
       this.showInputForm = false;
@@ -225,7 +241,7 @@ struct Index {
       const error = err as BusinessError;
       VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_publish_error');
-      Logger.error(`Publish error: ${error.code}`);
+      Logger.error(`Publish error: code=${error.code}, message=${error.message}`);
     }
   }
 
@@ -235,17 +251,21 @@ struct Index {
     this.reminderTime = '';
   }
 
-  private listReminders() {
-    reminderAgentManager.getValidReminders().then((reminders) => {
+  private async listReminders() {
+    try {
+      const reminders = await reminderAgentManager.getValidReminders();
+      Logger.info(`Retrieved ${reminders.length} reminders`);
       if (reminders.length === 0) {
         this.reminderStatus = $r('app.string.status_no_reminders');
       } else {
-        this.reminderStatus = `${this.context.resourceManager.getStringSync($r('app.string.status_total_reminders'))} ${reminders.length}`;
+        const countText = this.context.resourceManager.getStringSync($r('app.string.status_total_reminders').id);
+        this.reminderStatus = `${countText} ${reminders.length}`;
       }
-    }).catch((err: BusinessError) => {
+    } catch (err) {
+      const error = err as BusinessError;
       this.reminderStatus = $r('app.string.status_listing_error');
-      Logger.error(`Listing error: ${err.code}`);
-    });
+      Logger.error(`Listing error: ${error.code}`);
+    }
   }
 
   private cancelReminder() {
@@ -261,9 +281,10 @@ struct Index {
       this.reminderId = -1;
       await DatabaseManager.saveSetting('lastReminderId', '-1');
     }).catch((err: BusinessError) => {
+      const error = err as BusinessError;
       VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_cancel_error');
-      Logger.error(`Cancel error: ${err.code}`);
+      Logger.error(`Cancel error: ${error.code}`);
     });
   }
 }
