@@ -75,6 +75,18 @@
     {
       "name": "back_button",
       "value": "Back"
+    },
+    {
+      "name": "status_publish_error",
+      "value": "Failed to set reminder."
+    },
+    {
+      "name": "status_listing_error",
+      "value": "Error listing reminders."
+    },
+    {
+      "name": "status_cancel_error",
+      "value": "Failed to cancel."
     }
   ]
 }

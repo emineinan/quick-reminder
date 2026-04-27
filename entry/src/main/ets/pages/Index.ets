@@ -4,6 +4,7 @@ import Logger from '../common/utils/Logger';
 import { notificationManager } from '@kit.NotificationKit';
 import { common } from '@kit.AbilityKit';
 import DatabaseManager from '../common/utils/DatabaseManager';
+import VibrationManager from '../common/utils/VibrationManager';
 
 @Entry
 @Component
@@ -21,7 +22,6 @@ struct Index {
     this.openNotificationPermission(this.context);
     await DatabaseManager.init(this.context);
 
-    // Load persisted state
     const savedReminderId = await DatabaseManager.getSetting('lastReminderId');
     if (savedReminderId) {
       this.reminderId = parseInt(savedReminderId);
@@ -38,7 +38,6 @@ struct Index {
       Stack() {
         Scroll() {
           Column() {
-            // Header
             Text($r('app.string.title_text'))
               .fontSize($r('app.float.title_text_font_size'))
               .fontWeight(FontWeight.Bold)
@@ -93,6 +92,7 @@ struct Index {
       .width('100%')
       .height($r('app.float.medium_height'))
       .onClick(() => {
+        VibrationManager.vibrateClick();
         this.showInputForm = true;
       })
 
@@ -108,6 +108,7 @@ struct Index {
       .width('100%')
       .height($r('app.float.medium_height'))
       .onClick(() => {
+        VibrationManager.vibrateClick();
         this.listReminders();
       })
 
@@ -121,6 +122,7 @@ struct Index {
       .width('100%')
       .height($r('app.float.medium_height'))
       .onClick(() => {
+        VibrationManager.vibrateClick();
         this.cancelReminder();
       })
     }
@@ -166,7 +168,10 @@ struct Index {
       Text($r('app.string.back_button'))
         .fontSize($r('app.float.back_font_size'))
         .fontColor($r('app.color.gray'))
-        .onClick(() => { this.showInputForm = false })
+        .onClick(() => {
+          VibrationManager.vibrateClick();
+          this.showInputForm = false;
+        })
     }
     .padding(4)
     .backgroundColor($r('app.color.card_background'))
@@ -185,11 +190,13 @@ struct Index {
     const timeInSeconds = parseInt(this.reminderTime);
 
     if (isNaN(timeInSeconds) || timeInSeconds <= 0) {
+      VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_invalid_time');
       return;
     }
 
     if (!this.reminderTitle || !this.reminderContent) {
+      VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_missing_fields');
       return;
     }
@@ -209,12 +216,14 @@ struct Index {
       this.showInputForm = false;
       this.clearForm();
 
-      // Persist state
+      VibrationManager.vibrateSuccess();
+
       await DatabaseManager.saveSetting('lastReminderId', id.toString());
       await DatabaseManager.saveSetting('lastNotificationId', this.notificationId.toString());
 
     } catch (err) {
       const error = err as BusinessError;
+      VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_publish_error');
       Logger.error(`Publish error: ${error.code}`);
     }
@@ -241,15 +250,18 @@ struct Index {
 
   private cancelReminder() {
     if (this.reminderId === -1) {
+      VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_need_reminder');
       return;
     }
 
     reminderAgentManager.cancelReminder(this.reminderId).then(async () => {
+      VibrationManager.vibrateSuccess();
       this.reminderStatus = $r('app.string.status_canceled');
       this.reminderId = -1;
       await DatabaseManager.saveSetting('lastReminderId', '-1');
     }).catch((err: BusinessError) => {
+      VibrationManager.vibrateError();
       this.reminderStatus = $r('app.string.status_cancel_error');
       Logger.error(`Cancel error: ${err.code}`);
     });
