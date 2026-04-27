@@ -54,7 +54,8 @@ export class DatabaseManager {
     };
 
     try {
-      await this.rdbStore.insert('APP_SETTINGS', valueBucket, relationalStore.ConflictResolution.REPLACE);
+      // Fixed: Use ON_CONFLICT_REPLACE as per modern HarmonyOS RDB API
+      await this.rdbStore.insert('APP_SETTINGS', valueBucket, relationalStore.ConflictResolution.ON_CONFLICT_REPLACE);
       Logger.info(`Setting ${key} saved`);
     } catch (err) {
       Logger.error(`Failed to save setting: ${JSON.stringify(err)}`);
