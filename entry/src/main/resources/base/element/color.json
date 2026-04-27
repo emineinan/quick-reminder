@@ -2,7 +2,7 @@
   "color": [
     {
       "name": "start_window_background",
-      "value": "#FFFFFF"
+      "value": "#000000"
     },
     {
       "name": "title_text",
@@ -26,27 +26,59 @@
     },
     {
       "name": "page_background",
-      "value": "#F0F4FF"
+      "value": "#000000"
     },
     {
       "name": "main_background",
-      "value": "#F0F4FF"
+      "value": "#000000"
     },
     {
       "name": "input_title_background",
-      "value": "#ffcc69f5"
+      "value": "#1A1A1A"
     },
     {
       "name": "input_content_background",
-      "value": "#fff1ab02"
+      "value": "#1A1A1A"
     },
     {
       "name": "input_time_background",
-      "value": "#ff324fb8"
+      "value": "#1A1A1A"
     },
     {
       "name": "button_save_background",
-      "value": "#FF13D059"
+      "value": "#13D059"
+    },
+    {
+      "name": "pet_name_color",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "pet_status_color",
+      "value": "#BBBBBB"
+    },
+    {
+      "name": "card_background",
+      "value": "#121212"
+    },
+    {
+      "name": "white",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "black",
+      "value": "#000000"
+    },
+    {
+      "name": "gray",
+      "value": "#808080"
+    },
+    {
+      "name": "green",
+      "value": "#008000"
+    },
+    {
+      "name": "orange",
+      "value": "#FFA500"
     }
   ]
 }

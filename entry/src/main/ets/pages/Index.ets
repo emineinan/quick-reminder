@@ -3,154 +3,223 @@ import { BusinessError } from '@kit.BasicServicesKit';
 import Logger from '../common/utils/Logger';
 import { notificationManager } from '@kit.NotificationKit';
 import { common } from '@kit.AbilityKit';
+import DatabaseManager from '../common/utils/DatabaseManager';
+import PetManager from '../common/utils/PetManager';
 
 @Entry
 @Component
 struct Index {
   private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
   private reminderId: number = -1;
-  @State reminderStatus: string = ''; // Stores status messages for UI feedback
-  @State reminderTitle: string = ''; // Reminder title input
-  @State reminderContent: string = ''; // Reminder content input
-  @State reminderTime: string = ''; // Reminder time input (in seconds)
-  @State showInputForm: boolean = false; // Flag to toggle the reminder form
-  @State notificationId: number = 1000; // Notification ID counter
+  @State reminderStatus: string | Resource = '';
+  @State reminderTitle: string = '';
+  @State reminderContent: string = '';
+  @State reminderTime: string = '';
+  @State showInputForm: boolean = false;
+  @State notificationId: number = 1000;
+  @State petHappiness: number = 100;
+  @State petEnergy: number = 100;
+  @State petStatusLabel: Resource = $r('app.string.pet_happy');
 
-  aboutToAppear() {
-    // Request notification permission when component appears
+  async aboutToAppear() {
     this.openNotificationPermission(this.context);
+    await DatabaseManager.init(this.context);
+    await PetManager.syncFromDb();
+    this.updatePetState();
+  }
+
+  updatePetState() {
+    this.petHappiness = PetManager.getHappiness();
+    this.petEnergy = PetManager.getEnergy();
+    this.petStatusLabel = PetManager.getStatusKey();
   }
 
   build() {
-    Scroll() {
-      Column() {
-        // Title text
-        Text($r('app.string.title_text'))
-          .fontSize($r('app.float.title_text_font_size'))
-          .fontWeight(FontWeight.Bold)
-          .fontColor($r('app.color.title_text'))
-          .textAlign(TextAlign.Center)
-          .margin({ bottom: $r('app.float.title_margin_bottom') })
-
-        if (this.showInputForm) {
-          // Show input form if toggled on
+    Column() {
+      Stack() {
+        Scroll() {
           Column() {
-            this.addForm()
-          }
-          .borderRadius($r('app.float.border_radius_large'))
-          .backgroundColor(Color.White)
-          .width('70%')
-        } else {
-          // Button: Create Reminder
-          Row({ space: $r('app.float.row_space') }) {
-            Image($r('app.media.bolt')).width('15%')
+            this.petHeader()
 
-            Text($r('app.string.create_reminder'))
-              .fontSize($r('app.float.page_text_font_size'))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-              .textAlign(TextAlign.Center)
+            if (this.showInputForm) {
+              this.addForm()
+            } else {
+              this.mainDashboard()
+            }
+
+            if (this.reminderStatus !== '') {
+              Text(this.reminderStatus)
+                .fontSize($r('app.float.small_text_font_size'))
+                .fontColor($r('app.color.status_text'))
+                .margin({ top: $r('app.float.status_text_margin_top') })
+                .textAlign(TextAlign.Center)
+            }
           }
-          .width('60%')
-          .height($r('app.float.medium_height'))
-          .borderRadius($r('app.float.border_radius_medium'))
-          .backgroundColor($r('app.color.button_create_background'))
-          .alignItems(VerticalAlign.Center)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => {
-            this.showInputForm = true;
-            this.createReminder();
+          .width('100%')
+          .padding({
+            top: $r('app.float.page_padding'),
+            bottom: $r('app.float.page_padding'),
+            left: '10%',
+            right: '10%'
           })
+        }
+        .scrollBar(BarState.Off)
+      }
+      .width('100%')
+      .height('100%')
+    }
+    .width('100%')
+    .height('100%')
+    .backgroundColor($r('app.color.main_background'))
+  }
 
-          // Button: Show Reminders
-          Row({ space: $r('app.float.row_space') }) {
-            Image($r('app.media.cat')).width('15%')
+  @Builder
+  petHeader() {
+    Column({ space: 2 }) {
+      Image($r('app.media.cat'))
+        .width($r('app.float.pet_image_size'))
+        .height($r('app.float.pet_image_size'))
+        .objectFit(ImageFit.Contain)
 
-            Text($r('app.string.show_reminders'))
-              .fontSize($r('app.float.page_text_font_size'))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-              .textAlign(TextAlign.Center)
-          }
-          .backgroundColor(($r('app.color.button_show_background')))
-          .width('60%')
-          .height($r('app.float.medium_height'))
-          .borderRadius($r('app.float.border_radius_medium'))
-          .margin({ top: $r('app.float.button_show_margin_top') })
-          .alignItems(VerticalAlign.Center)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => {
-            this.listReminders();
-          })
+      Text($r('app.string.pet_name'))
+        .fontSize($r('app.float.small_text_font_size'))
+        .fontColor($r('app.color.pet_name_color'))
+        .fontWeight(FontWeight.Medium)
 
-          // Button: Cancel Reminder
-          Row({ space: $r('app.float.row_space') }) {
-            Image($r('app.media.bomb')).width('15%')
+      Text(this.petStatusLabel)
+        .fontSize($r('app.float.small_text_font_size'))
+        .fontColor($r('app.color.pet_status_color'))
 
-            Text($r('app.string.cancel_reminder'))
-              .fontSize($r('app.float.page_text_font_size'))
-              .fontWeight(FontWeight.Bold)
-              .fontColor(Color.White)
-              .textAlign(TextAlign.Center)
-          }
-          .backgroundColor(($r('app.color.button_cancel_background')))
-          .width('60%')
-          .height($r('app.float.medium_height'))
-          .borderRadius($r('app.float.border_radius_medium'))
-          .margin({ top: $r('app.float.button_cancel_margin_top') })
-          .alignItems(VerticalAlign.Center)
-          .justifyContent(FlexAlign.Center)
-          .onClick(() => {
-            this.cancelReminder();
-          })
+      Row({ space: 4 }) {
+        Progress({ value: this.petHappiness, total: 100, type: ProgressType.Linear })
+          .width('30%')
+          .color($r('app.color.green'))
+        Progress({ value: this.petEnergy, total: 100, type: ProgressType.Linear })
+          .width('30%')
+          .color($r('app.color.orange'))
+      }
+    }
+    .margin({ bottom: 8 })
+  }
 
-          // Show reminder status message if available
-          if (this.reminderStatus !== '') {
-            Text(this.reminderStatus)
-              .fontSize($r('app.float.page_text_font_size'))
-              .fontWeight(FontWeight.Bold)
-              .fontColor($r('app.color.button_show_background'))
-              .margin({ top: $r('app.float.status_text_margin_top') })
-          }
+  @Builder
+  mainDashboard() {
+    Column({ space: 4 }) {
+      Button() {
+        Row({ space: $r('app.float.row_space') }) {
+          Image($r('app.media.bolt')).width(12).height(12)
+          Text($r('app.string.create_reminder'))
+            .fontSize($r('app.float.page_text_font_size'))
+            .fontColor($r('app.color.black'))
+            .fontWeight(FontWeight.Bold)
         }
       }
-      .padding(20)
-      .alignItems(HorizontalAlign.Center)
+      .type(ButtonType.Capsule)
+      .backgroundColor($r('app.color.button_create_background'))
+      .width('100%')
+      .height($r('app.float.medium_height'))
+      .onClick(() => {
+        this.showInputForm = true;
+      })
+
+      Button() {
+        Row({ space: $r('app.float.row_space') }) {
+          Text($r('app.string.show_reminders'))
+            .fontSize($r('app.float.page_text_font_size'))
+            .fontColor($r('app.color.white'))
+        }
+      }
+      .type(ButtonType.Capsule)
+      .backgroundColor($r('app.color.button_show_background'))
+      .width('100%')
+      .height($r('app.float.medium_height'))
+      .onClick(() => {
+        this.listReminders();
+      })
+
+      Button() {
+        Text($r('app.string.cancel_reminder'))
+          .fontSize($r('app.float.page_text_font_size'))
+          .fontColor($r('app.color.white'))
+      }
+      .type(ButtonType.Capsule)
+      .backgroundColor($r('app.color.button_cancel_background'))
+      .width('100%')
+      .height($r('app.float.medium_height'))
+      .onClick(() => {
+        this.cancelReminder();
+      })
     }
-    .height('100%')
-    .width('100%')
-    .backgroundColor(($r('app.color.main_background')))
+  }
+
+  @Builder
+  addForm() {
+    Column({ space: 4 }) {
+      TextInput({ placeholder: $r('app.string.input_title_placeholder'), text: this.reminderTitle })
+        .onChange((val: string) => this.reminderTitle = val)
+        .placeholderColor($r('app.color.gray'))
+        .fontColor($r('app.color.white'))
+        .backgroundColor($r('app.color.input_title_background'))
+        .height($r('app.float.small_height'))
+        .fontSize($r('app.float.small_text_font_size'))
+
+      TextInput({ placeholder: $r('app.string.input_content_placeholder'), text: this.reminderContent })
+        .onChange((val: string) => this.reminderContent = val)
+        .placeholderColor($r('app.color.gray'))
+        .fontColor($r('app.color.white'))
+        .backgroundColor($r('app.color.input_content_background'))
+        .height($r('app.float.small_height'))
+        .fontSize($r('app.float.small_text_font_size'))
+
+      TextInput({ placeholder: $r('app.string.input_time_placeholder'), text: this.reminderTime })
+        .onChange((val: string) => this.reminderTime = val)
+        .type(InputType.Number)
+        .placeholderColor($r('app.color.gray'))
+        .fontColor($r('app.color.white'))
+        .backgroundColor($r('app.color.input_time_background'))
+        .height($r('app.float.small_height'))
+        .fontSize($r('app.float.small_text_font_size'))
+
+      Button($r('app.string.save_button'))
+        .backgroundColor($r('app.color.button_save_background'))
+        .width('100%')
+        .height($r('app.float.medium_height'))
+        .margin({ top: 4 })
+        .onClick(() => {
+          this.createReminder();
+        })
+
+      Text($r('app.string.back_button'))
+        .fontSize($r('app.float.back_font_size'))
+        .fontColor($r('app.color.gray'))
+        .onClick(() => { this.showInputForm = false })
+    }
+    .padding(4)
+    .backgroundColor($r('app.color.card_background'))
+    .borderRadius($r('app.float.border_radius_medium'))
   }
 
   private openNotificationPermission(context: common.UIAbilityContext) {
-    // Request notification permission from the user
     notificationManager.requestEnableNotification(context).then(() => {
       Logger.info('Enable notification success');
     }).catch((err: Error) => {
-      Logger.error('Enable notification failed because ' + JSON.stringify(err));
+      Logger.error('Enable notification failed: ' + JSON.stringify(err));
     });
   }
 
-  private createReminder() {
-    Logger.info('createReminder() started');
-
+  private async createReminder() {
     const timeInSeconds = parseInt(this.reminderTime);
 
-    // Validate reminder time
     if (isNaN(timeInSeconds) || timeInSeconds <= 0) {
-      Logger.info('Invalid time input');
-      this.reminderStatus = JSON.stringify($r('app.string.title_text'));
+      this.reminderStatus = $r('app.string.status_invalid_time');
       return;
     }
 
-    // Validate inputs
     if (!this.reminderTitle || !this.reminderContent) {
-      Logger.info('Title or content missing');
-      this.reminderStatus = JSON.stringify($r('app.string.status_missing_fields'));
+      this.reminderStatus = $r('app.string.status_missing_fields');
       return;
     }
 
-    // Create reminder request object
     let timerReminder: reminderAgentManager.ReminderRequestTimer = {
       reminderType: reminderAgentManager.ReminderType.REMINDER_TYPE_TIMER,
       triggerTimeInSeconds: timeInSeconds,
@@ -159,122 +228,54 @@ struct Index {
       notificationId: ++this.notificationId
     };
 
-    Logger.info(`Publishing reminder with ID: ${this.notificationId}`);
-
-    // Publish reminder
-    reminderAgentManager.publishReminder(timerReminder).then((id: number) => {
-      Logger.info(`Reminder published successfully with request ID: ${id}`);
+    try {
+      const id = await reminderAgentManager.publishReminder(timerReminder);
       this.reminderId = id;
-      this.reminderStatus = JSON.stringify($r('app.string.status_set'));
+      this.reminderStatus = $r('app.string.status_set');
       this.showInputForm = false;
-      this.reminderTitle = '';
-      this.reminderContent = '';
-      this.reminderTime = '';
-    }).catch((err: BusinessError) => {
-      Logger.info(`Failed to publish reminder: ${err.code}, ${err.message}`);
-      this.reminderStatus = `Error: ${err.code}, ${err.message}`;
-    });
+      this.clearForm();
+
+      await PetManager.completeReminder();
+      this.updatePetState();
+
+    } catch (err) {
+      const error = err as BusinessError;
+      this.reminderStatus = `Error: ${error.code}`;
+    }
+  }
+
+  private clearForm() {
+    this.reminderTitle = '';
+    this.reminderContent = '';
+    this.reminderTime = '';
   }
 
   private listReminders() {
-    Logger.info('listReminders() started');
-
-    // Get active reminders
     reminderAgentManager.getValidReminders().then((reminders) => {
-      Logger.info(`Retrieved ${reminders.length} active reminders`);
       if (reminders.length === 0) {
-        this.reminderStatus = JSON.stringify($r('app.string.status_no_reminders'));
-        return;
+        this.reminderStatus = $r('app.string.status_no_reminders');
+      } else {
+        this.reminderStatus = `${this.context.resourceManager.getStringSync($r('app.string.status_total_reminders'))} ${reminders.length}`;
       }
-
-      this.reminderStatus = `Total reminders: ${reminders.length}`;
     }).catch((err: BusinessError) => {
-      Logger.info(`Error while listing reminders: ${err.code}`);
-      this.reminderStatus = `Listing error: ${err.code}`;
+      this.reminderStatus = `Error: ${err.code}`;
     });
   }
 
   private cancelReminder() {
-    Logger.info('cancelReminder() started');
-
-    // Check if reminder exists
     if (this.reminderId === -1) {
-      Logger.info('No reminder to cancel');
-      this.reminderStatus = JSON.stringify($r('app.string.status_need_reminder'));
+      this.reminderStatus = $r('app.string.status_need_reminder');
       return;
     }
 
-    // Cancel reminder
-    reminderAgentManager.cancelReminder(this.reminderId).then(() => {
-      Logger.info(`Reminder ${this.reminderTitle} canceled successfully`);
-      this.reminderStatus = JSON.stringify($r('app.string.status_canceled'));
+    reminderAgentManager.cancelReminder(this.reminderId).then(async () => {
+      this.reminderStatus = $r('app.string.status_canceled');
       this.reminderId = -1;
+
+      await PetManager.ignoreReminder();
+      this.updatePetState();
     }).catch((err: BusinessError) => {
-      Logger.info(`Failed to cancel reminder: ${err.code}`);
-      this.reminderStatus = `Cancellation error: ${err.code}`;
+      this.reminderStatus = `Error: ${err.code}`;
     });
-  }
-
-  @Builder
-  addForm() {
-    // Input: Title
-    TextInput({ placeholder: $r('app.string.input_title_placeholder') })
-      .onChange((val: string) => this.reminderTitle = val)
-      .width('80%')
-      .borderRadius($r('app.float.border_radius_small'))
-      .backgroundColor($r('app.color.input_title_background'))
-      .fontColor(Color.White)
-      .placeholderColor(Color.White)
-      .fontSize($r('app.float.small_text_font_size'))
-      .placeholderFont({ size: $r('app.float.placeholder_font_size') })
-      .margin({ bottom: $r('app.float.input_title_margin_bottom'), top: $r('app.float.input_title_margin_top') })
-      .height($r('app.float.small_height'))
-
-    // Input: Content
-    TextInput({ placeholder: $r('app.string.input_content_placeholder') })
-      .onChange((val: string) => this.reminderContent = val)
-      .width('80%')
-      .borderRadius($r('app.float.border_radius_small'))
-      .backgroundColor($r('app.color.input_content_background'))
-      .fontColor(Color.White)
-      .placeholderColor(Color.White)
-      .fontSize($r('app.float.small_text_font_size'))
-      .placeholderFont({ size: $r('app.float.placeholder_font_size') })
-      .margin({ bottom: $r('app.float.input_content_margin_bottom') })
-      .height($r('app.float.small_height'))
-
-    // Input: Time (in seconds)
-    TextInput({ placeholder: $r('app.string.input_time_placeholder') })
-      .onChange((val: string) => this.reminderTime = val)
-      .width('80%')
-      .height($r('app.float.small_height'))
-      .borderRadius($r('app.float.border_radius_small'))
-      .backgroundColor($r('app.color.input_time_background'))
-      .fontColor(Color.White)
-      .placeholderColor(Color.White)
-      .fontSize($r('app.float.small_text_font_size'))
-      .placeholderFont({ size: $r('app.float.placeholder_font_size') })
-
-
-    // Button: Save Reminder
-    Row({ space: $r('app.float.row_space') }) {
-      Image($r('app.media.star')).width('20%')
-
-      Text($r('app.string.save_button'))
-        .fontSize($r('app.float.save_button_font_size'))
-        .fontWeight(FontWeight.Bold)
-        .fontColor(Color.White)
-        .textAlign(TextAlign.Center)
-    }
-    .backgroundColor($r('app.color.button_save_background'))
-    .width('40%')
-    .height($r('app.float.small_height'))
-    .borderRadius($r('app.float.border_radius_small'))
-    .margin({ top: $r('app.float.button_save_margin_top'), bottom: $r('app.float.button_save_margin_bottom') })
-    .alignItems(VerticalAlign.Center)
-    .justifyContent(FlexAlign.Center)
-    .onClick(() => {
-      this.createReminder();
-    })
   }
 }
