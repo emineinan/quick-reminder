@@ -4,34 +4,33 @@ import Logger from '../common/utils/Logger';
 import { notificationManager } from '@kit.NotificationKit';
 import { common } from '@kit.AbilityKit';
 import DatabaseManager from '../common/utils/DatabaseManager';
-import PetManager from '../common/utils/PetManager';
 
 @Entry
 @Component
 struct Index {
   private context = this.getUIContext().getHostContext() as common.UIAbilityContext;
-  private reminderId: number = -1;
+  @State reminderId: number = -1;
   @State reminderStatus: string | Resource = '';
   @State reminderTitle: string = '';
   @State reminderContent: string = '';
   @State reminderTime: string = '';
   @State showInputForm: boolean = false;
   @State notificationId: number = 1000;
-  @State petHappiness: number = 100;
-  @State petEnergy: number = 100;
-  @State petStatusLabel: Resource = $r('app.string.pet_happy');
 
   async aboutToAppear() {
     this.openNotificationPermission(this.context);
     await DatabaseManager.init(this.context);
-    await PetManager.syncFromDb();
-    this.updatePetState();
-  }
 
-  updatePetState() {
-    this.petHappiness = PetManager.getHappiness();
-    this.petEnergy = PetManager.getEnergy();
-    this.petStatusLabel = PetManager.getStatusKey();
+    // Load persisted state
+    const savedReminderId = await DatabaseManager.getSetting('lastReminderId');
+    if (savedReminderId) {
+      this.reminderId = parseInt(savedReminderId);
+    }
+
+    const savedNotificationId = await DatabaseManager.getSetting('lastNotificationId');
+    if (savedNotificationId) {
+      this.notificationId = parseInt(savedNotificationId);
+    }
   }
 
   build() {
@@ -39,7 +38,12 @@ struct Index {
       Stack() {
         Scroll() {
           Column() {
-            this.petHeader()
+            // Header
+            Text($r('app.string.title_text'))
+              .fontSize($r('app.float.title_text_font_size'))
+              .fontWeight(FontWeight.Bold)
+              .fontColor($r('app.color.title_text'))
+              .margin({ bottom: $r('app.float.title_margin_bottom'), top: $r('app.float.page_padding') })
 
             if (this.showInputForm) {
               this.addForm()
@@ -57,7 +61,6 @@ struct Index {
           }
           .width('100%')
           .padding({
-            top: $r('app.float.page_padding'),
             bottom: $r('app.float.page_padding'),
             left: '10%',
             right: '10%'
@@ -74,40 +77,11 @@ struct Index {
   }
 
   @Builder
-  petHeader() {
-    Column({ space: 2 }) {
-      Image($r('app.media.cat'))
-        .width($r('app.float.pet_image_size'))
-        .height($r('app.float.pet_image_size'))
-        .objectFit(ImageFit.Contain)
-
-      Text($r('app.string.pet_name'))
-        .fontSize($r('app.float.small_text_font_size'))
-        .fontColor($r('app.color.pet_name_color'))
-        .fontWeight(FontWeight.Medium)
-
-      Text(this.petStatusLabel)
-        .fontSize($r('app.float.small_text_font_size'))
-        .fontColor($r('app.color.pet_status_color'))
-
-      Row({ space: 4 }) {
-        Progress({ value: this.petHappiness, total: 100, type: ProgressType.Linear })
-          .width('30%')
-          .color($r('app.color.green'))
-        Progress({ value: this.petEnergy, total: 100, type: ProgressType.Linear })
-          .width('30%')
-          .color($r('app.color.orange'))
-      }
-    }
-    .margin({ bottom: 8 })
-  }
-
-  @Builder
   mainDashboard() {
     Column({ space: 4 }) {
       Button() {
         Row({ space: $r('app.float.row_space') }) {
-          Image($r('app.media.bolt')).width(12).height(12)
+          Image($r('app.media.bolt')).width($r('app.float.icon_size_small')).height($r('app.float.icon_size_small'))
           Text($r('app.string.create_reminder'))
             .fontSize($r('app.float.page_text_font_size'))
             .fontColor($r('app.color.black'))
@@ -235,12 +209,14 @@ struct Index {
       this.showInputForm = false;
       this.clearForm();
 
-      await PetManager.completeReminder();
-      this.updatePetState();
+      // Persist state
+      await DatabaseManager.saveSetting('lastReminderId', id.toString());
+      await DatabaseManager.saveSetting('lastNotificationId', this.notificationId.toString());
 
     } catch (err) {
       const error = err as BusinessError;
-      this.reminderStatus = `Error: ${error.code}`;
+      this.reminderStatus = $r('app.string.status_publish_error');
+      Logger.error(`Publish error: ${error.code}`);
     }
   }
 
@@ -258,7 +234,8 @@ struct Index {
         this.reminderStatus = `${this.context.resourceManager.getStringSync($r('app.string.status_total_reminders'))} ${reminders.length}`;
       }
     }).catch((err: BusinessError) => {
-      this.reminderStatus = `Error: ${err.code}`;
+      this.reminderStatus = $r('app.string.status_listing_error');
+      Logger.error(`Listing error: ${err.code}`);
     });
   }
 
@@ -271,11 +248,10 @@ struct Index {
     reminderAgentManager.cancelReminder(this.reminderId).then(async () => {
       this.reminderStatus = $r('app.string.status_canceled');
       this.reminderId = -1;
-
-      await PetManager.ignoreReminder();
-      this.updatePetState();
+      await DatabaseManager.saveSetting('lastReminderId', '-1');
     }).catch((err: BusinessError) => {
-      this.reminderStatus = `Error: ${err.code}`;
+      this.reminderStatus = $r('app.string.status_cancel_error');
+      Logger.error(`Cancel error: ${err.code}`);
     });
   }
 }

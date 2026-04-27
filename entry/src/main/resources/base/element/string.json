@@ -73,30 +73,6 @@
       "value": "Canceled."
     },
     {
-      "name": "pet_happy",
-      "value": "Happy"
-    },
-    {
-      "name": "pet_tired",
-      "value": "Tired"
-    },
-    {
-      "name": "pet_hungry",
-      "value": "Hungry"
-    },
-    {
-      "name": "pet_name",
-      "value": "Buddy"
-    },
-    {
-      "name": "preset_water",
-      "value": "Water"
-    },
-    {
-      "name": "preset_stretch",
-      "value": "Stretch"
-    },
-    {
       "name": "back_button",
       "value": "Back"
     }

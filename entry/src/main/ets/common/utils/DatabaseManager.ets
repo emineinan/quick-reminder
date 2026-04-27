@@ -3,7 +3,7 @@ import { common } from '@kit.AbilityKit';
 import Logger from './Logger';
 
 /**
- * Manager for RDB persistence to store pet status and app settings.
+ * Manager for RDB persistence to store application settings and reminder history.
  */
 export class DatabaseManager {
   private static instance: DatabaseManager;
@@ -30,12 +30,11 @@ export class DatabaseManager {
 
     try {
       this.rdbStore = await relationalStore.getRdbStore(context, this.STORE_CONFIG);
+      // We keep the table structure for consistency, but focus on general settings/history
       await this.rdbStore.executeSql(
-        'CREATE TABLE IF NOT EXISTS PET_STATUS (' +
-        'id INTEGER PRIMARY KEY, ' +
-        'happiness INTEGER, ' +
-        'energy INTEGER, ' +
-        'last_updated INTEGER)'
+        'CREATE TABLE IF NOT EXISTS APP_SETTINGS (' +
+        'key TEXT PRIMARY KEY, ' +
+        'value TEXT)'
       );
       Logger.info('Database initialized successfully');
     } catch (err) {
@@ -44,46 +43,43 @@ export class DatabaseManager {
   }
 
   /**
-   * Saves or updates the pet status.
+   * Saves a setting to the database.
    */
-  async savePetStatus(happiness: number, energy: number): Promise<void> {
+  async saveSetting(key: string, value: string): Promise<void> {
     if (!this.rdbStore) return;
 
     const valueBucket: relationalStore.ValuesBucket = {
-      id: 1,
-      happiness: happiness,
-      energy: energy,
-      last_updated: Date.now()
+      key: key,
+      value: value
     };
 
     try {
-      await this.rdbStore.insert('PET_STATUS', valueBucket, relationalStore.ConflictResolution.REPLACE);
-      Logger.info('Pet status saved');
+      await this.rdbStore.insert('APP_SETTINGS', valueBucket, relationalStore.ConflictResolution.REPLACE);
+      Logger.info(`Setting ${key} saved`);
     } catch (err) {
-      Logger.error(`Failed to save pet status: ${JSON.stringify(err)}`);
+      Logger.error(`Failed to save setting: ${JSON.stringify(err)}`);
     }
   }
 
   /**
-   * Retrieves the pet status.
+   * Retrieves a setting from the database.
    */
-  async getPetStatus(): Promise<{ happiness: number, energy: number } | null> {
+  async getSetting(key: string): Promise<string | null> {
     if (!this.rdbStore) return null;
 
-    let predicates = new relationalStore.RdbPredicates('PET_STATUS');
-    predicates.equalTo('id', 1);
+    let predicates = new relationalStore.RdbPredicates('APP_SETTINGS');
+    predicates.equalTo('key', key);
 
     try {
       const resultSet = await this.rdbStore.query(predicates);
       if (resultSet.goToFirstRow()) {
-        const happiness = resultSet.getLong(resultSet.getColumnIndex('happiness'));
-        const energy = resultSet.getLong(resultSet.getColumnIndex('energy'));
+        const value = resultSet.getString(resultSet.getColumnIndex('value'));
         resultSet.close();
-        return { happiness, energy };
+        return value;
       }
       resultSet.close();
     } catch (err) {
-      Logger.error(`Failed to get pet status: ${JSON.stringify(err)}`);
+      Logger.error(`Failed to get setting: ${JSON.stringify(err)}`);
     }
     return null;
   }

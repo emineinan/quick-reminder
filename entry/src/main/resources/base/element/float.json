@@ -97,12 +97,12 @@
       "value": "2vp"
     },
     {
-      "name": "pet_image_size",
-      "value": "32vp"
-    },
-    {
       "name": "back_font_size",
       "value": "9fp"
+    },
+    {
+      "name": "icon_size_small",
+      "value": "12vp"
     }
   ]
 }

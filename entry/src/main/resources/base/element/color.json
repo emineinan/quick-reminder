@@ -49,14 +49,6 @@
       "value": "#13D059"
     },
     {
-      "name": "pet_name_color",
-      "value": "#FFFFFF"
-    },
-    {
-      "name": "pet_status_color",
-      "value": "#BBBBBB"
-    },
-    {
       "name": "card_background",
       "value": "#121212"
     },
@@ -71,14 +63,6 @@
     {
       "name": "gray",
       "value": "#808080"
-    },
-    {
-      "name": "green",
-      "value": "#008000"
-    },
-    {
-      "name": "orange",
-      "value": "#FFA500"
     }
   ]
 }
