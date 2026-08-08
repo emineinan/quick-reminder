@@ -2,43 +2,43 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "module description"
+      "value": "QuickReminder - Smartwatch Reminder App"
     },
     {
       "name": "EntryAbility_desc",
-      "value": "description"
+      "value": "QuickReminder Ability"
     },
     {
       "name": "EntryAbility_label",
-      "value": "label"
+      "value": "QuickReminder"
     },
     {
       "name": "title_text",
-      "value": "⏰ Quick Reminder"
+      "value": "Quick Reminder"
     },
     {
       "name": "create_reminder",
-      "value": "Create Reminder"
+      "value": "New Reminder"
     },
     {
       "name": "show_reminders",
-      "value": "Show Reminders"
+      "value": "Active Tasks"
     },
     {
       "name": "cancel_reminder",
-      "value": "Cancel Reminder"
+      "value": "Cancel Last"
     },
     {
       "name": "save_button",
-      "value": "Save"
+      "value": "Start"
     },
     {
       "name": "input_title_placeholder",
-      "value": "Enter title"
+      "value": "Task name"
     },
     {
       "name": "input_content_placeholder",
-      "value": "Enter content"
+      "value": "Details"
     },
     {
       "name": "input_time_placeholder",
@@ -46,15 +46,15 @@
     },
     {
       "name": "status_invalid_time",
-      "value": "Please enter a valid time in seconds."
+      "value": "Enter valid time (sec)"
     },
     {
       "name": "status_missing_fields",
-      "value": "Please fill in both title and content."
+      "value": "Missing title/content"
     },
     {
       "name": "status_set",
-      "value": "Reminder set."
+      "value": "Reminder set!"
     },
     {
       "name": "status_no_reminders",
@@ -62,27 +62,31 @@
     },
     {
       "name": "status_total_reminders",
-      "value": "Total reminders: "
+      "value": "Active: "
     },
     {
       "name": "status_need_reminder",
-      "value": "You need to create a reminder first."
+      "value": "No reminder found."
     },
     {
       "name": "status_canceled",
-      "value": "Reminder canceled."
+      "value": "Canceled."
     },
     {
-      "name": "status_listing_error",
-      "value": "Listing error: "
+      "name": "back_button",
+      "value": "Back"
     },
     {
       "name": "status_publish_error",
-      "value": "Error: "
+      "value": "Failed to set reminder."
+    },
+    {
+      "name": "status_listing_error",
+      "value": "Error listing reminders."
     },
     {
       "name": "status_cancel_error",
-      "value": "Cancellation error: "
+      "value": "Failed to cancel."
     }
   ]
 }
